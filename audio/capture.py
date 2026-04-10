@@ -113,14 +113,21 @@ class MicCapture:
                         logger.debug("Speech started (rms=%.4f)", rms)
                 else:
                     frames.append(data)
-                    if rms >= threshold:
-                        silent_chunks = 0
-                        speech_chunks += 1
-                    else:
+                    speech_chunks += 1
+                    if rms < threshold:
                         silent_chunks += 1
+                    else:
+                        silent_chunks = 0
+
+                    # Log periodically so the user can see what's happening
+                    if speech_chunks % 25 == 0:
+                        logger.debug(
+                            "Recording … chunk=%d, rms=%.4f, silent=%d/%d",
+                            speech_chunks, rms, silent_chunks, silence_chunks_limit,
+                        )
 
                     if silent_chunks >= silence_chunks_limit:
-                        if speech_chunks >= min_speech_chunks:
+                        if speech_chunks - silent_chunks >= min_speech_chunks:
                             logger.debug(
                                 "Speech ended (%d chunks, ~%.1fs)",
                                 speech_chunks,
