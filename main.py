@@ -36,6 +36,7 @@ from tts.base import BaseTTS
 from hub_client import HubClient
 from audio.capture import MicCapture
 from audio.playback import Speaker
+from text_processing import clean_for_speech, StreamingVoicePreprocessor
 
 logger = logging.getLogger("voice")
 
@@ -168,6 +169,7 @@ class VoiceApp:
         print("🤖 ", end="", flush=True)
         sentence_buffer = ""
         full_answer = ""
+        preprocessor = StreamingVoicePreprocessor(enabled=self.cfg.voice_preprocess)
 
         try:
             async for chunk in self.hub.ask_stream(text, self.conversation_id):
@@ -177,25 +179,32 @@ class VoiceApp:
                 # Check for complete sentences to speak
                 sentences, sentence_buffer = _split_sentences(sentence_buffer)
                 for sentence in sentences:
+                    tts_text = preprocessor.clean(sentence)
                     if self.cfg.tts_engine == "console":
                         print(sentence, end=" ", flush=True)
+                    elif tts_text.strip():
+                        await self._speak(tts_text)
+                        print(sentence, end=" ", flush=True)  # print original to console
                     else:
-                        await self._speak(sentence)
                         print(sentence, end=" ", flush=True)
 
         except httpx.HTTPError as exc:
             logger.warning("Streaming failed (%s), falling back to sync ask", exc)
             response = await self.hub.ask(text, self.conversation_id)
             full_answer = response.answer
-            sentence_buffer = full_answer
+            # Use voice-optimized text if available
+            sentence_buffer = response.voice_answer or full_answer
             self.conversation_id = response.conversation_id
 
         # Speak any remaining buffered text
         if sentence_buffer.strip():
+            tts_text = preprocessor.clean(sentence_buffer)
             if self.cfg.tts_engine == "console":
                 print(sentence_buffer, flush=True)
+            elif tts_text.strip():
+                await self._speak(tts_text)
+                print(sentence_buffer, flush=True)
             else:
-                await self._speak(sentence_buffer)
                 print(sentence_buffer, flush=True)
 
         print()  # newline after answer

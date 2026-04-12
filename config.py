@@ -60,6 +60,10 @@ class Config:
     # General
     log_level: str = field(default_factory=lambda: _env("LOG_LEVEL", "INFO"))
 
+    # Voice preprocessing
+    voice_preprocess: bool = field(default_factory=lambda: _env("VOICE_PREPROCESS", "true").lower() in ("true", "1", "yes"))
+    voice_use_server_text: bool = field(default_factory=lambda: _env("VOICE_USE_SERVER_TEXT", "false").lower() in ("true", "1", "yes"))
+
 
 def load_config(env_file: str | Path | None = ".env") -> Config:
     """Load configuration from environment (optionally reading a .env file first)."""

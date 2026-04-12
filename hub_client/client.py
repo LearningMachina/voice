@@ -21,6 +21,7 @@ class AskResponse:
     conversation_id: str
     message_id: str = ""
     model: str = ""
+    voice_answer: str = ""
 
 
 class HubClient:
@@ -70,6 +71,7 @@ class HubClient:
             conversation_id=data["conversation_id"],
             message_id=data.get("message_id", ""),
             model=data.get("model", ""),
+            voice_answer=data.get("voice_answer", ""),
         )
 
     # -- ask (SSE streaming) --------------------------------------------------
@@ -117,6 +119,7 @@ class HubClient:
                         cid = data.get("conversation_id", "")
                         logger.debug("Stream done (conversation_id=%s)", cid)
                         self._last_conversation_id = cid
+                        self._last_voice_text = data.get("voice_text", "")
                     current_event = ""
 
                 # blank lines are SSE event delimiters — just skip
@@ -124,3 +127,7 @@ class HubClient:
     @property
     def last_conversation_id(self) -> str | None:
         return getattr(self, "_last_conversation_id", None)
+
+    @property
+    def last_voice_text(self) -> str:
+        return getattr(self, "_last_voice_text", "")
